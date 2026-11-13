@@ -1,0 +1,44 @@
+{
+  "name": "bd-address-parser",
+  "version": "0.1.0",
+  "description": "Parse free-form Bangladeshi delivery addresses in English, Bangla and Banglish into house, road, area, thana/upazila, district, division and postcode, with fuzzy matching, confidence scores and an isInsideDhaka helper.",
+  "keywords": ["bangladesh", "address-parser", "bangla", "banglish", "geocoding", "courier", "ecommerce", "upazila", "dhaka", "typescript"],
+  "author": "Saizul Amin (https://github.com/saizul)",
+  "license": "MIT",
+  "homepage": "https://github.com/saizul/bd-address-parser#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/saizul/bd-address-parser.git" },
+  "bugs": { "url": "https://github.com/saizul/bd-address-parser/issues" },
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
+      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist/esm", "dist/cjs", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE.md"],
+  "engines": { "node": ">=18" },
+  "sideEffects": false,
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "data": "node scripts/build-data.mjs",
+    "data:check": "node scripts/build-data.mjs --check",
+    "build": "npm run clean && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.mjs",
+    "build:test": "tsc -p tsconfig.test.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "lint": "eslint . && npm run typecheck && npm run data:check",
+    "test": "npm run build:test && node scripts/run-tests.mjs",
+    "test:dist": "node scripts/smoke-dist.cjs && node scripts/smoke-dist.mjs",
+    "prepublishOnly": "npm run lint && npm test && npm run build && npm run test:dist"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.10.0",
+    "eslint": "^10.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}
