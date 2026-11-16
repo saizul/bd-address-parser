@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `compareAddresses()` to tell whether two addresses point to the same place, for duplicate order and repeat
+  customer checks: a `same`, `likely_same`, `same_area`, `different` or `unknown` verdict, a weighted score,
+  per-field outcomes (district, thana, area and section, postcode, house, road, flat, floor, block, sector, lane,
+  village, post office, street text and, with `comparePhone`, the phone) and the conflicting fields.
+- `addressKey()` for grouping orders per household or area, with `level` (`district`, `thana`, `area`, `door`).
+- `canonicalNumber()`: house, road and flat values in one form (`23/A`, `23-a` and `২৩/এ` give `23a`).
+- `examples/duplicate-orders.mjs`, run in CI.
+
 ## [0.1.0] - 2026-11-13
 
 ### Added

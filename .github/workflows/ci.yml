@@ -46,4 +46,5 @@ jobs:
           node examples/basic.mjs
           node examples/courier-zone.mjs
           node examples/batch.mjs examples/addresses.txt
+          node examples/duplicate-orders.mjs
           node examples/commonjs.cjs

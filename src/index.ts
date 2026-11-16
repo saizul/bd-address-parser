@@ -2,6 +2,18 @@ export { parseAddress } from './parser.js';
 export { formatAddress, type FormatOptions } from './format.js';
 export { isInsideDhaka, getDeliveryZone } from './helpers.js';
 export {
+  compareAddresses,
+  addressKey,
+  canonicalNumber,
+  type AddressComparison,
+  type AddressKeyOptions,
+  type CompareField,
+  type CompareOptions,
+  type CompareVerdict,
+  type FieldComparison,
+  type FieldOutcome,
+} from './compare.js';
+export {
   searchPlaces,
   getDivisions,
   getDistricts,

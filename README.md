@@ -69,6 +69,9 @@ r.confidence;      // 0.95
   and warnings for conflicting districts, postcode mismatches and fuzzy matches.
 - **Courier zones** - `isInsideDhaka()` and `getDeliveryZone()` return `inside_dhaka`, `dhaka_suburb`,
   `outside_dhaka` or `unknown`, with configurable suburb lists.
+- **Address comparison** - `compareAddresses()` tells whether two addresses point to the same door (`same`,
+  `likely_same`, `same_area`, `different`, `unknown`) with per-field outcomes, and `addressKey()` gives a stable key
+  for grouping orders per household, so `House 23A, Road-7, Mirpur-10` and `বাসা ২৩/এ, রোড ৭, মিরপুর ১০` match.
 - **Zero runtime dependencies**, ESM and CommonJS builds with type declarations, Node.js 18 or newer. Also runs in
   browsers and edge runtimes (no Node APIs are used at runtime).
 
@@ -163,6 +166,42 @@ getDeliveryZone('House 5, Road 3');                      // 'unknown'
 
 Both functions accept a raw string or a result of `parseAddress()`, so you can parse once and reuse the result.
 
+### Compare addresses and find duplicate orders
+
+```ts
+import { compareAddresses, addressKey } from 'bd-address-parser';
+
+const r = compareAddresses('House 23A, Road-7, Mirpur-10 Dhaka 1216', 'বাসা ২৩/এ, রোড ৭, মিরপুর ১০, ঢাকা');
+r.verdict;   // 'same'
+r.score;     // 1
+r.conflicts; // []
+
+compareAddresses('House 23A, Road 7, Mirpur 10', 'House 25, Road 7, Mirpur 10').conflicts; // ['house'] -> 'different'
+compareAddresses('Mirpur 10, Dhaka', 'House 5, Road 3, Mirpur 10, Dhaka').verdict;        // 'same_area'
+compareAddresses('Mirpur, Dhaka', 'Mirpur, Kushtia').verdict;                              // 'different'
+
+addressKey('H 23/A, Rd 7, Mirpur 10, Dhaka');                    // 'dhaka|dhaka/mirpur-model|dhaka/mirpur:10|h23a|r7'
+addressKey('H 23/A, Rd 7, Mirpur 10, Dhaka', { level: 'area' }); // 'dhaka|dhaka/mirpur-model|dhaka/mirpur:10'
+```
+
+Each field is compared on both sides: district, thana, area (with section), postcode, house, road, flat, floor,
+block, sector, lane, village, post office and street text, and the phone with `comparePhone: true`. House, road,
+flat and block values are compared in a canonical form (`23/A`, `23-a`, `০২৩/এ` all become `23a`); village, post
+office and street text by phonetic key with a spelling tolerance (`textThreshold`, default `0.85`).
+
+| Verdict | Meaning |
+| --- | --- |
+| `same` | Location agrees and at least two street-level details (house, road, flat, block, sector, lane, village) agree. |
+| `likely_same` | Mostly agrees, with small differences (a missing section number, an inferred thana) or one detail to compare. |
+| `same_area` | Location agrees, but street details are missing on one side. |
+| `different` | The district, postcode, house, flat or village disagrees, or the weighted score is below 0.6. |
+| `unknown` | Too little was recognised to decide. |
+
+A field missing on either side is not counted. A thana that the parser only inferred from an area counts as a
+partial match when it differs, because neighbourhoods such as Mirpur span several thanas. `addressKey()` is an exact
+key (empty when no district is known); use `compareAddresses()` when the spelling of the street details varies. See
+[`examples/duplicate-orders.mjs`](examples/duplicate-orders.mjs).
+
 ### Search places
 
 ```ts
@@ -216,6 +255,9 @@ normalizePhone('+880 1812-345678');         // '01812345678'
 | `formatAddress(parsed, options?)` | `string` | One-line label. `lang: 'en' \| 'bn'`, `includeDivision`, `separator`. |
 | `isInsideDhaka(input, options?)` | `boolean` | Inside Dhaka city. `includeSuburbs` also accepts Dhaka sub-areas. |
 | `getDeliveryZone(input, options?)` | `DeliveryZone` | `inside_dhaka`, `dhaka_suburb`, `outside_dhaka` or `unknown`. |
+| `compareAddresses(a, b, options?)` | `AddressComparison` | `verdict`, `score` (0 to 1), `fields` (per-field `outcome`: `match`, `partial`, `mismatch`, `missing`), `conflicts` and both parse results. Options: parse options plus `comparePhone`, `textThreshold`. |
+| `addressKey(input, options?)` | `string` | Grouping key `district\|thana\|area[:section]\|h..\|r..\|f..`. `level`: `district`, `thana`, `area` or `door` (default). |
+| `canonicalNumber(value)` | `string` | Canonical house, road or flat value: `২৩/এ` gives `23a`. |
 | `searchPlaces(query, options?)` | `SearchResult[]` | Place search with the parser's matching. Options: `kinds`, `minScore`, `disableFuzzy`, `limit` (default 10). |
 | `getDivisions()` | `Division[]` | All 8 divisions. |
 | `getDistricts(divisionId?)` | `District[]` | All 64 districts, or those of one division. |
@@ -315,6 +357,7 @@ Build first (`npm run build`), then:
 | [`examples/basic.mjs`](examples/basic.mjs) | Parsing and formatting in English and Bangla |
 | [`examples/courier-zone.mjs`](examples/courier-zone.mjs) | Delivery charge by zone, asking the customer when unsure |
 | [`examples/batch.mjs`](examples/batch.mjs) | Parse [`examples/addresses.txt`](examples/addresses.txt) to CSV |
+| [`examples/duplicate-orders.mjs`](examples/duplicate-orders.mjs) | Grouping orders per household and flagging duplicates |
 | [`examples/commonjs.cjs`](examples/commonjs.cjs) | Using the CommonJS build |
 
 ## Data
@@ -338,14 +381,14 @@ Old spellings are accepted as input but the result always uses the official name
 
 ```bash
 npm install
-npm test           # compiles and runs the node:test suites (about 300 tests)
+npm test           # compiles and runs the node:test suites (over 320 tests)
 npm run lint       # eslint, type check and generated-data check
 npm run build && npm run test:dist   # load the ESM and CJS builds
 ```
 
 The tests cover over 150 real-world style addresses (Dhaka, Chattogram and rural, English, Bangla and Banglish),
-the data counts, aliases, fuzzy matching, components, postcodes, zones, formatting, ambiguity and robustness against
-odd input. CI runs them on Node 18, 20, 22 and 24.
+the data counts, aliases, fuzzy matching, components, postcodes, zones, formatting, address comparison, ambiguity
+and robustness against odd input. CI runs them on Node 18, 20, 22 and 24.
 
 ## Limitations
 
