@@ -72,6 +72,9 @@ r.confidence;      // 0.95
 - **Address comparison** - `compareAddresses()` tells whether two addresses point to the same door (`same`,
   `likely_same`, `same_area`, `different`, `unknown`) with per-field outcomes, and `addressKey()` gives a stable key
   for grouping orders per household, so `House 23A, Road-7, Mirpur-10` and `বাসা ২৩/এ, রোড ৭, মিরপুর ১০` match.
+- **Order review** - `reviewAddress()` says whether an address is ready for a courier label or needs a
+  confirmation call: no district, no thana or area, no street detail, no phone (optional), low confidence,
+  ambiguous place names or contradictions.
 - **Zero runtime dependencies**, ESM and CommonJS builds with type declarations, Node.js 18 or newer. Also runs in
   browsers and edge runtimes (no Node APIs are used at runtime).
 
@@ -202,6 +205,28 @@ partial match when it differs, because neighbourhoods such as Mirpur span severa
 key (empty when no district is known); use `compareAddresses()` when the spelling of the street details varies. See
 [`examples/duplicate-orders.mjs`](examples/duplicate-orders.mjs).
 
+### Review an address before shipping
+
+```ts
+import { reviewAddress } from 'bd-address-parser';
+
+reviewAddress('House 12, Road 5, Dhanmondi, Dhaka-1209').ok; // true
+reviewAddress('Mirpur').reasons.map((r) => r.code);         // ['no_street_detail', 'low_confidence', 'ambiguous']
+reviewAddress('House 12, Road 5, Dhanmondi, Dhaka 4000').reasons[0];
+// { code: 'conflict', message: 'Postcode 4000 belongs to Chattogram, not Dhaka.' }
+reviewAddress(order.address, { requirePhone: true, minConfidence: 0.6 });
+```
+
+| Reason | When |
+| --- | --- |
+| `no_district` | No district found or inferred. |
+| `no_thana` | No thana, upazila or area. |
+| `no_street_detail` | No house, road, flat, lane, block, sector, village, landmark or street text. |
+| `no_phone` | With `requirePhone: true`, no mobile number in the address. |
+| `low_confidence` | Confidence below `minConfidence` (default `0.5`). |
+| `ambiguous` | A place name matches more than one place (turn off with `flagAmbiguous: false`). |
+| `conflict` | Postcode, district or division contradict each other (message from the parser warning). |
+
 ### Search places
 
 ```ts
@@ -256,6 +281,7 @@ normalizePhone('+880 1812-345678');         // '01812345678'
 | `isInsideDhaka(input, options?)` | `boolean` | Inside Dhaka city. `includeSuburbs` also accepts Dhaka sub-areas. |
 | `getDeliveryZone(input, options?)` | `DeliveryZone` | `inside_dhaka`, `dhaka_suburb`, `outside_dhaka` or `unknown`. |
 | `compareAddresses(a, b, options?)` | `AddressComparison` | `verdict`, `score` (0 to 1), `fields` (per-field `outcome`: `match`, `partial`, `mismatch`, `missing`), `conflicts` and both parse results. Options: parse options plus `comparePhone`, `textThreshold`. |
+| `reviewAddress(input, options?)` | `AddressReview` | `ok`, `reasons` (`code` and `message`) and the parse result. Options: parse options plus `requirePhone`, `minConfidence`, `flagAmbiguous`. |
 | `addressKey(input, options?)` | `string` | Grouping key `district\|thana\|area[:section]\|h..\|r..\|f..`. `level`: `district`, `thana`, `area` or `door` (default). |
 | `canonicalNumber(value)` | `string` | Canonical house, road or flat value: `২৩/এ` gives `23a`. |
 | `searchPlaces(query, options?)` | `SearchResult[]` | Place search with the parser's matching. Options: `kinds`, `minScore`, `disableFuzzy`, `limit` (default 10). |
