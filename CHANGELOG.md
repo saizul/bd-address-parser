@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 - `addressKey()` for grouping orders per household or area, with `level` (`district`, `thana`, `area`, `door`).
 - `canonicalNumber()`: house, road and flat values in one form (`23/A`, `23-a` and `২৩/এ` give `23a`).
 - `examples/duplicate-orders.mjs`, run in CI.
+- `reviewAddress()` to decide whether an order address is ready to ship or needs a confirmation call. Reasons:
+  `no_district`, `no_thana`, `no_street_detail`, `no_phone` (with `requirePhone`), `low_confidence` (below
+  `minConfidence`, default 0.5), `ambiguous` and `conflict` (postcode or district contradictions).
 
 ## [0.1.0] - 2026-11-13
 

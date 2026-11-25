@@ -2,6 +2,13 @@ export { parseAddress } from './parser.js';
 export { formatAddress, type FormatOptions } from './format.js';
 export { isInsideDhaka, getDeliveryZone } from './helpers.js';
 export {
+  reviewAddress,
+  type AddressReview,
+  type ReviewOptions,
+  type ReviewReason,
+  type ReviewReasonCode,
+} from './review.js';
+export {
   compareAddresses,
   addressKey,
   canonicalNumber,
